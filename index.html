@@ -6,6 +6,14 @@
     <title>ReHome</title>
 </head>
 <body>
-    
+    <input type="text" id="itemInput" placeholder="Enter your item...">
+    <button id="addButton">Add Item</button>
+    <form id="itemForm">
+        <p>What condition is your item?</p>
+        <input type="radio" name="condition" value="Broken" checked> Broken <br>
+        <input type="radio" name="condition" value="Reusable"> Reusable <br>
+    </form>
+    <button onclick="checkCondition()">Check Condition</button>
+    <script src="app.js"></script>
 </body>
 </html>
