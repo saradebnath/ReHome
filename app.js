@@ -9,6 +9,5 @@ function checkCondition() {
     const form = document.getElementById("itemForm");
     const data= new FormData(form);
     const itemStatus = data.get("condition");
-    alert("Condition is: " + itemStatus);
     console.log("Condition is: " + itemStatus);
 }
