@@ -1,4 +1,4 @@
-const API_KEY = 'MY_API_KEY';
+const API_KEY = process.env.MY_API_KEY;
 const RADIUS = 16000;
 let category = 'electronics';
 
