@@ -4,40 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ReHome</title>
-    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>ReHome</h1>
-    <p class = "sub">Give it away, don't throw it away.</p>
-    <label>What is your item?
-        <input type="text" id="itemInput" placeholder="e.g. laptop">
-    </label>
+    <header>
+        <h1>ReHome</h1>
+        <p class="sub">Give it away, don't throw it away.</p>
+    </header>
 
-    <div class="field">
-        <span class="fLabel">Category</span>
-        <div class="chips" id="categoryChips">
-            <button type="button" class="chip selected" data-value="electronics">Electronics</button>
-            <button type="button" class="chip" data-value="furniture">Furniture</button>
-            <button type="button" class="chip" data-value="clothing">Clothing</button>
-            <button type="button" class="chip" data-value="books">Books</button>
-            <button type="button" class="chip" data-value="appliances">Appliances</button>
-            <button type="button" class="chip" data-value="other">Other</button>
-        </div>
-    </div>
+    <main class="page-layout">
+        <section class="search-panel" aria-label="Search options">
+            <label>What is your item?
+                <input type="text" id="itemInput" placeholder="e.g. laptop">
+            </label>
 
-    <fieldset>
-        <legend>I want to...</legend>
-        <label class = "radio"><input type="radio" name="intent" value="donate" checked> Donate</label>
-        <label class = "radio"><input type="radio" name="intent" value="recycle"> Recycle</label>
-        
-    </fieldset>
-        <label>Your ZIP Code:
-        <input type="text" id="zipInput" placeholder="e.g. 90210" maxlength="5">
-    </label>
+            <div class="field">
+                <span class="fLabel">Category</span>
+                <div class="chips" id="categoryChips">
+                    <button type="button" class="chip selected" data-value="electronics">Electronics</button>
+                    <button type="button" class="chip" data-value="furniture">Furniture</button>
+                    <button type="button" class="chip" data-value="clothing">Clothing</button>
+                    <button type="button" class="chip" data-value="books">Books</button>
+                    <button type="button" class="chip" data-value="appliances">Appliances</button>
+                    <button type="button" class="chip" data-value="other">Other</button>
+                </div>
+            </div>
 
-    <button id="findBtn">Find Nearby</button>
-    <div id="resultsList"></div>
+            <fieldset>
+                <legend>I want to...</legend>
+                <label class="radio"><input type="radio" name="intent" value="donate" checked> Donate</label>
+                <label class="radio"><input type="radio" name="intent" value="recycle"> Recycle</label>
+            </fieldset>
+
+            <label>Your ZIP Code:
+                <input type="text" id="zipInput" placeholder="e.g. 90210" maxlength="5">
+            </label>
+
+            <button id="findBtn">Find Nearby</button>
+        </section>
+
+        <section class="results-panel" aria-label="Nearby places">
+            <h2>Places nearby:</h2>
+            <div id="resultsList"></div>
+        </section>
+    </main>
+
     <script src="app.js"></script>
-
 </body>
 </html>

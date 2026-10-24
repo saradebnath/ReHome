@@ -1,129 +1,187 @@
-const API_KEY = process.env.MY_API_KEY;
-const RADIUS = 16000;
-let category = 'electronics';
+const API_KEY = '';
+const SEARCH_RADIUS_METERS = 16000;
 
-document.getElementById('categoryChips').addEventListener('click', (event) => {
-  const chip = event.target.closest('.chip');
-  if (!chip) return;
+const categoryChips = document.getElementById('categoryChips');
+const searchButton = document.getElementById('findBtn');
+const results = document.getElementById('resultsList');
 
-  document.querySelectorAll('.chip').forEach((button) => {
-    button.classList.toggle('selected', button === chip);
+categoryChips.addEventListener('click', (event) => {
+  const clickedChip = event.target.closest('.chip');
+  if (!clickedChip) return;
+
+  document.querySelectorAll('.chip').forEach((chip) => {
+    chip.classList.toggle('selected', chip === clickedChip);
   });
-  category = chip.dataset.value;
 });
 
-document.getElementById('findBtn').addEventListener('click', async () => {
-  const zip = document.getElementById('zipInput').value.trim();
-  const item = document.getElementById('itemInput').value.trim();
-  const intent = document.querySelector('input[name="intent"]:checked').value;
-  const results = document.getElementById('resultsList');
-  const button = document.getElementById('findBtn');
+searchButton.addEventListener('click', searchNearby);
 
-  if (!/^\d{5}$/.test(zip) || !item) {
-    results.textContent = 'Enter an item and a valid 5-digit ZIP code.';
+async function searchNearby() {
+  const zipCode = document.getElementById('zipInput').value.trim();
+  const itemName = document.getElementById('itemInput').value.trim();
+  const intent = document.querySelector('input[name="intent"]:checked').value;
+  const isValidZipCode = /^\d{5}$/.test(zipCode);
+
+  if (!isValidZipCode || !itemName) {
+    results.textContent = 'Please enter an item and a valid 5-digit ZIP code.';
     return;
   }
 
-  button.disabled = true;
+  searchButton.disabled = true;
   results.textContent = 'Searching nearby...';
 
   try {
-    const zipData = await get('/v1/geocode/search', {
-      text: `${zip}, USA`,
+    const zipLocation = await getApiData('/v1/geocode/search', {
+      text: `${zipCode}, USA`,
       filter: 'countrycode:us',
       format: 'geojson'
     });
-    const [longitude, latitude] = zipData.features?.[0]?.geometry?.coordinates || [];
+
+    const coordinates = zipLocation.features?.[0]?.geometry?.coordinates;
+    const [longitude, latitude] = coordinates || [];
 
     if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
-      results.textContent = 'ZIP code not found. Check it and try again.';
+      results.textContent = 'ZIP code not found. Please check it and try again.';
       return;
     }
 
-    const params = {
-      filter: `circle:${longitude},${latitude},${RADIUS}`,
-      bias: `proximity:${longitude},${latitude}`,
-      limit: '50'
-    };
-    const places = intent === 'donate'
-      ? await get('/v2/places', { ...params, categories: 'commercial.second_hand' })
-      : await get('/v2/places', { ...params, categories: 'service.recycling.centre' });
-
-    showPlaces(places.features, latitude, longitude);
+    const nearbyPlaces = await findNearbyPlaces(intent, longitude, latitude);
+    showPlaces(nearbyPlaces.features, latitude, longitude);
   } catch (error) {
     console.error(error);
     results.textContent = error.message || 'Could not search nearby. Please try again.';
   } finally {
-    button.disabled = false;
+    searchButton.disabled = false;
   }
-});
+}
 
-async function get(path, params) {
+async function findNearbyPlaces(intent, longitude, latitude) {
+  const category = intent === 'donate'
+    ? 'commercial.second_hand'
+    : 'service.recycling.centre';
+
+  return getApiData('/v2/places', {
+    filter: `circle:${longitude},${latitude},${SEARCH_RADIUS_METERS}`,
+    bias: `proximity:${longitude},${latitude}`,
+    limit: '50',
+    categories: category
+  });
+}
+
+async function getApiData(path, params) {
+  if (!API_KEY) {
+    throw new Error('Add your Geoapify API key to the API_KEY at the top of app.js.');
+  }
+
   const url = new URL(`https://api.geoapify.com${path}`);
   url.search = new URLSearchParams({ ...params, apiKey: API_KEY });
 
   const response = await fetch(url);
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || 'Location search failed.');
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Location search failed.');
+  }
+
   return data;
 }
 
-function showPlaces(features, userLat, userLon) {
-  const results = document.getElementById('resultsList');
+function showPlaces(features, userLatitude, userLongitude) {
   results.replaceChildren();
 
-  const places = features?.filter(({ properties = {}, geometry }) => {
-    const [lon, lat] = geometry?.coordinates || [];
+  const places = (features || []).filter((place) => {
+    const properties = place.properties || {};
+    const coordinates = place.geometry?.coordinates || [];
+    const [longitude, latitude] = coordinates;
+
     return typeof properties.name === 'string'
       && properties.name.trim()
-      && Number.isFinite(lat)
-      && Number.isFinite(lon)
+      && Number.isFinite(latitude)
+      && Number.isFinite(longitude)
       && !isClosed(properties);
-  }) || [];
-  if (!places.length) {
+  });
+
+  if (places.length === 0) {
     results.textContent = 'No nearby places found. Try another ZIP code.';
     return;
   }
 
-  places.slice(0, 5).forEach(({ properties = {}, geometry }) => {
-    const [lon, lat] = geometry.coordinates;
+  places.slice(0, 5).forEach((place) => {
+    const properties = place.properties || {};
+    const [longitude, latitude] = place.geometry.coordinates;
     const name = properties.name.trim();
     const address = properties.formatted || properties.address_line2 || 'Address unavailable';
-    const miles = distance(userLat, userLon, lat, lon);
-    const map = new URL('https://www.google.com/maps/search/');
-    map.search = new URLSearchParams({ api: '1', query: `${name}, ${address}` });
+    const milesAway = calculateDistance(userLatitude, userLongitude, latitude, longitude);
+
+    const mapsUrl = new URL('https://www.google.com/maps/search/');
+    mapsUrl.search = new URLSearchParams({
+      api: '1',
+      query: `${name}, ${address}`
+    });
 
     const card = document.createElement('div');
     card.className = 'place-card';
+
     const title = document.createElement('h3');
     title.textContent = name;
+
     const details = document.createElement('p');
-    details.textContent = `📍 ${address} · ${miles.toFixed(1)} miles`;
-    const link = document.createElement('a');
-    link.href = map.toString();
-    link.textContent = 'Open in Google Maps';
-    card.append(title, details, link);
+    details.textContent = `${address} · ${milesAway.toFixed(1)} miles`;
+
+    const mapsLink = document.createElement('a');
+    mapsLink.href = mapsUrl.toString();
+    mapsLink.textContent = 'Open in Google Maps';
+
+    card.append(title, details, mapsLink);
     results.appendChild(card);
   });
 }
 
 function isClosed(properties) {
-  const raw = properties.datasource?.raw || {};
-  const closedValues = ['yes', 'true', 'closed', 'permanently_closed', 'abandoned', 'disused', 'demolished', 'vacant'];
-  const isClosedValue = (value) =>
-    closedValues.includes(String(value || '').toLowerCase().replaceAll(' ', '_'));
-  const status = properties.status || raw.status || raw.lifecycle;
+  const rawData = properties.datasource?.raw || {};
+  const closedValues = [
+    'yes',
+    'true',
+    'closed',
+    'permanently_closed',
+    'abandoned',
+    'disused',
+    'demolished',
+    'vacant'
+  ];
 
-  return isClosedValue(status) || isClosedValue(raw.shop)
-    || ['closed', 'disused', 'abandoned', 'demolished'].some((key) =>
-      isClosedValue(properties[key] ?? raw[key])
-      || Boolean(raw[`${key}:shop`] || raw[`${key}:amenity`])
-    );
+  function hasClosedValue(value) {
+    const normalizedValue = String(value || '').toLowerCase().replaceAll(' ', '_');
+    return closedValues.includes(normalizedValue);
+  }
+
+  const status = properties.status || rawData.status || rawData.lifecycle;
+  if (hasClosedValue(status) || hasClosedValue(rawData.shop)) {
+    return true;
+  }
+
+  const closureTypes = ['closed', 'disused', 'abandoned', 'demolished'];
+  return closureTypes.some((type) => {
+    const value = properties[type] ?? rawData[type];
+    const shopStatus = rawData[`${type}:shop`];
+    const amenityStatus = rawData[`${type}:amenity`];
+
+    return hasClosedValue(value) || Boolean(shopStatus || amenityStatus);
+  });
 }
 
-function distance(lat1, lon1, lat2, lon2) {
-  const rad = (degrees) => degrees * Math.PI / 180;
-  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2
-    + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
-  return 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  function toRadians(degrees) {
+    return (degrees * Math.PI) / 180;
+  }
+
+  const latitudeDifference = toRadians(lat2 - lat1);
+  const longitudeDifference = toRadians(lon2 - lon1);
+  const distancePart =
+    Math.sin(latitudeDifference / 2) ** 2
+    + Math.cos(toRadians(lat1))
+      * Math.cos(toRadians(lat2))
+      * Math.sin(longitudeDifference / 2) ** 2;
+
+  return 3958.8 * 2 * Math.atan2(Math.sqrt(distancePart), Math.sqrt(1 - distancePart));
 }
