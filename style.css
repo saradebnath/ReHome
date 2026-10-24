@@ -152,6 +152,11 @@ label.radio {
     margin-top: 16px;
 }
 
+.demo-notice {
+    margin: 0 0 12px;
+    color: #637267;
+}
+
 .place-card {
     margin-top: 12px;
     padding: 16px;

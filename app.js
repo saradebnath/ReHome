@@ -17,6 +17,11 @@ categoryChips.addEventListener('click', (event) => {
 searchButton.addEventListener('click', searchNearby);
 
 async function searchNearby() {
+  if (!API_KEY) {
+    showDemoResults();
+    return;
+  }
+
   const zipCode = document.getElementById('zipInput').value.trim();
   const itemName = document.getElementById('itemInput').value.trim();
   const intent = document.querySelector('input[name="intent"]:checked').value;
@@ -127,6 +132,67 @@ function showPlaces(features, userLatitude, userLongitude) {
 
     const details = document.createElement('p');
     details.textContent = `${address} · ${milesAway.toFixed(1)} miles`;
+
+    const mapsLink = document.createElement('a');
+    mapsLink.href = mapsUrl.toString();
+    mapsLink.textContent = 'Open in Google Maps';
+
+    card.append(title, details, mapsLink);
+    results.appendChild(card);
+  });
+}
+
+function showDemoResults() {
+  results.replaceChildren();
+
+  const notice = document.createElement('p');
+  notice.className = 'demo-notice';
+  notice.textContent = 'API key not found. This is a mock demo of what a clothing search will look like for ZIP 98053. For live results, add a Geoapify API key to app.js.';
+  results.appendChild(notice);
+
+  const places = [
+    {
+      name: 'Small Threads for Kids',
+      address: 'Small Threads for Kids, 8215 160th Avenue Northeast, Redmond, WA 98052, United States of America',
+      distance: '4.5'
+    },
+    {
+      name: 'ACS Redmond Overlake Discovery Shop',
+      address: 'ACS Redmond Overlake Discovery Shop, 14840 Northeast 24th Street, Redmond, WA 98052, United States of America',
+      distance: '6.4'
+    },
+    {
+      name: 'Jubilee REACH Thrift Store',
+      address: 'Jubilee REACH Thrift Store, 2301 148th Avenue Northeast, Bellevue, WA 98007, United States of America',
+      distance: '6.6'
+    },
+    {
+      name: 'Value Village',
+      address: 'Value Village, 14160 Northeast 178th Street, Woodinville, WA 98072, United States of America',
+      distance: '7.2'
+    },
+    {
+      name: 'Eastside Community Aid (ECA) Thrift Shop',
+      address: 'Eastside Community Aid (ECA) Thrift Shop, 12451 116th Avenue Northeast, Kirkland, WA 98034, United States of America',
+      distance: '7.4'
+    }
+  ];
+
+  places.forEach(({ name, address, distance }) => {
+    const card = document.createElement('div');
+    card.className = 'place-card';
+
+    const title = document.createElement('h3');
+    title.textContent = name;
+
+    const details = document.createElement('p');
+    details.textContent = `${address} · ${distance} miles`;
+
+    const mapsUrl = new URL('https://www.google.com/maps/search/');
+    mapsUrl.search = new URLSearchParams({
+      api: '1',
+      query: `${name}, ${address}`
+    });
 
     const mapsLink = document.createElement('a');
     mapsLink.href = mapsUrl.toString();
